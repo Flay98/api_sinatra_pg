@@ -1,0 +1,10 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+require_relative '../api_sinatra_postgres'
+require 'irb'
+DB = Recruitment::Database.connection
+Company = Recruitment::Company
+Job = Recruitment::Job
+Geek = Recruitment::Geek
+Apply = Recruitment::Apply
+IRB.start

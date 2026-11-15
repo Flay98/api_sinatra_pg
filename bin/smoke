@@ -1,0 +1,59 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+require 'net/http'
+require 'json'
+require 'securerandom'
+
+base = URI(ENV.fetch('BASE_URL', 'http://localhost:4567'))
+checks = 0
+request = lambda do |method, path, expected, attributes = nil|
+  uri = URI.join(base.to_s, path)
+  klass = Net::HTTP.const_get(method.capitalize)
+  req = klass.new(uri)
+  if attributes
+    req['Content-Type'] = 'application/json'
+    req.body = JSON.generate(attributes)
+  end
+  response = Net::HTTP.start(uri.hostname, uri.port, open_timeout: 5, read_timeout: 5) { |http| http.request(req) }
+  raise "#{method} #{path}: expected #{expected}, got #{response.code}" unless response.code.to_i == expected
+  raise "#{path}: expected JSON" unless response['Content-Type'].to_s.include?('application/json')
+  result = JSON.parse(response.body)
+  checks += 1
+  puts "#{response.code} #{method.upcase} #{path}"
+  result
+end
+
+created = []
+begin
+  %w[/ /hello/Peter /api/v1/companies /api/v1/companies?name=Mo;location=Ne
+     /api/v1/company/1 /api/v1/company_jobs?name=Mo /api/v1/companies/1/jobs
+     /api/v1/jobs /api/v1/jobs?place=Remo /api/v1/job/1 /api/v1/jobs_company/MoGo
+     /api/v1/geeks /api/v1/geeks/1/jobs /api/v1/applies /api/v1/applies_read
+     /api/v1/applies_unread].each { |path| request.call('get', path, 200) }
+  request.call('get', '/api/v1/job/2147483647', 404)
+  request.call('get', '/api/v1/no_such_route', 404)
+  request.call('get', '/api/v1/job/invalid', 400)
+  request.call('post', '/api/v1/companies', 422, name: '')
+
+  company = request.call('post', '/api/v1/companies', 201,
+                         name: "Smoke #{SecureRandom.hex(4)}", location: 'Moscow')
+  created << ['companies', company.fetch('id')]
+  job = request.call('post', '/api/v1/jobs', 201,
+                    name: 'Smoke Ruby', place: 'Remote', company_id: company.fetch('id'))
+  created << ['jobs', job.fetch('id')]
+  geek = request.call('post', '/api/v1/geeks', 201, name: 'Smoke Geek', stack: 'Ruby', resume: true)
+  created << ['geeks', geek.fetch('id')]
+  apply = request.call('post', '/api/v1/applies', 201,
+                      job_id: job.fetch('id'), geek_id: geek.fetch('id'))
+  created << ['applies', apply.fetch('id')]
+  request.call('patch', "/api/v1/companies/#{company['id']}", 200, location: 'Kazan')
+  request.call('put', "/api/v1/jobs/#{job['id']}", 200, name: 'Smoke Sinatra', place: 'Contract', company_id: company['id'])
+  request.call('patch', "/api/v1/geeks/#{geek['id']}", 200, resume: false)
+  updated = request.call('patch', "/api/v1/applies/#{apply['id']}", 200, read: true, invited: true)
+  raise 'Boolean serialization failed' unless updated['read'] == true && updated['invited'] == true
+ensure
+  # Delete only the records created by this run, in reverse foreign-key order.
+  created.reverse_each { |resource, id| request.call('delete', "/api/v1/#{resource}/#{id}", 200) }
+end
+puts "HTTP smoke: #{checks} checks passed; temporary records removed."

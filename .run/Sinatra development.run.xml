@@ -1,0 +1,16 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="Sinatra development" type="RubyRunConfigurationType" factoryName="Ruby">
+    <module name="api_sinatra_pg" />
+    <option name="RUBY_ARGS" value="" />
+    <option name="WORK DIR" value="$PROJECT_DIR$" />
+    <option name="SHOULD_USE_SDK" value="true" />
+    <option name="ALTERN_SDK" value="" />
+    <option name="myPassParentEnvs" value="true" />
+    <option name="PATH" value="$PROJECT_DIR$/api_sinatra_postgres.rb" />
+    <option name="SCRIPT_ARGS" value="" />
+    <envs>
+      <env name="RACK_ENV" value="development" />
+    </envs>
+    <method v="2" />
+  </configuration>
+</component>

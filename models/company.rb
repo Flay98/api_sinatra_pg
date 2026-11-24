@@ -12,6 +12,7 @@ module Recruitment
       super
       validates_presence %i[name location]
       validates_schema_types
+      validates_unique %i[name location], message: 'company with this name and location already exists'
     end
 
     def self.by_name(name)

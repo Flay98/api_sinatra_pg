@@ -33,7 +33,8 @@ module Recruitment
 
     error Sequel::ValidationFailed do
       exception = env['sinatra.error']
-      api_error(422, 'Validation failed', errors: exception.model.errors)
+      errors = exception.model.errors.transform_keys { |fields| Array(fields).join(', ') }
+      api_error(422, 'Validation failed', errors: errors)
     end
 
     error Sequel::ForeignKeyConstraintViolation do
